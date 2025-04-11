@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{% block title %}Sistema de Eventos{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: {{ theme.primary_color }};
+            --secondary-color: {{ theme.secondary_color }};
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1 class="site-title">{% block header_title %}Sistema de Eventos{% endblock %}</h1>
+            
+            {% if not hide_nav|default(false) %}
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="{{ url_for('index') }}">Início</a></li>
+                    
+                    {% if current_user.is_authenticated %}
+                        <li><a href="{{ url_for('create_event') }}">Criar Evento</a></li>
+                        <li><a href="{{ url_for('logout') }}">Sair</a></li>
+                    {% else %}
+                        <li><a href="{{ url_for('login') }}">Entrar</a></li>
+                        <li><a href="{{ url_for('register') }}">Registrar</a></li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+    </header>
+    
+    <main>
+        <div class="container">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                    <div class="flash-message {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endwith %}
+            
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 - Lígia & Paulo</p>
+        </div>
+    </footer>
+    
+    {% block scripts %}
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    {% endblock %}
+</body>
+</html>

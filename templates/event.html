@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ event.name }}{% endblock %}
+
+{% block header_title %}{{ event.name }}{% endblock %}
+
+{% block extra_head %}
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+{% endblock %}
+
+{% block content %}
+<div class="event-header">
+    <h2>{{ event.name }}</h2>
+    <p class="event-date">{{ event.date.strftime('%d/%m/%Y %H:%M') }}</p>
+    {% if event.description %}
+    <p class="event-description">{{ event.description }}</p>
+    {% endif %}
+</div>
+
+<div class="action-buttons">
+    <button id="btn-camera" class="action-btn">
+        <i class="camera-icon"></i>
+        <span>Tirar Foto</span>
+    </button>
+    <a href="{{ url_for('gallery', unique_code=event.unique_code) }}" class="action-btn">
+        <i class="gallery-icon"></i>
+        <span>Ver Galeria</span>
+    </a>
+</div>
+
+<!-- Área da câmera (oculta inicialmente) -->
+<div id="camera-container" class="camera-container" style="display: none;">
+    <video id="camera-video" autoplay playsinline></video>
+    <canvas id="camera-canvas" style="display: none;"></canvas>
+    <img id="camera-photo" style="display: none;">
+    
+    <div class="camera-controls">
+        <button id="capture-btn" class="camera-btn">Capturar</button>
+        <button id="retake-btn" class="camera-btn" style="display: none;">Tirar Novamente</button>
+        <button id="upload-btn" class="camera-btn" style="display: none;">Enviar</button>
+        <button id="close-camera" class="camera-btn">Fechar</button>
+    </div>
+</div>
+
+<!-- Área de feedback após upload -->
+<div id="upload-feedback" class="upload-feedback" style="display: none;">
+    <div class="success-message">
+        <h3>Foto enviada com sucesso!</h3>
+        <p>Obrigado por compartilhar seus momentos.</p>
+        <button id="close-feedback" class="btn">Fechar</button>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
+<script src="{{ url_for('static', filename='js/camera.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    initCamera({
+        uploadUrl: "{{ url_for('upload_photo', unique_code=event.unique_code) }}",
+        apiCompatible: checkApiCompatibility()
+    });
+});
+</script>
+{% endblock %}

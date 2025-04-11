@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block title %}Criar Evento{% endblock %}
+
+{% block content %}
+<section class="form-section">
+    <h2>Criar Novo Evento</h2>
+    <p class="form-description">
+        Preencha o formulário abaixo para criar um novo evento. 
+        Um QR code será gerado e enviado para o email informado.
+    </p>
+    
+    <form method="post" class="create-event-form">
+        <div class="form-group">
+            <label for="name">Nome do Evento*</label>
+            <input type="text" id="name" name="name" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="date">Data e Hora do Evento*</label>
+            <input type="datetime-local" id="date" name="date" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="email">Email para Receber o QR Code*</label>
+            <input type="email" id="email" name="email" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="description">Descrição do Evento</label>
+            <textarea id="description" name="description" rows="4"></textarea>
+        </div>
+        
+        <div class="form-submit">
+            <button type="submit" class="btn">Criar Evento e Gerar QR Code</button>
+        </div>
+    </form>
+</section>
+{% endblock %}

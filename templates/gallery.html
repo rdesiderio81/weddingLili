@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+
+{% block title %}Galeria: {{ event.name }}{% endblock %}
+
+{% block header_title %}Galeria: {{ event.name }}{% endblock %}
+
+{% block content %}
+<div class="gallery-header">
+    <h2>{{ event.name }}</h2>
+    <p class="event-date">{{ event.date.strftime('%d/%m/%Y %H:%M') }}</p>
+    <a href="{{ url_for('event_page', unique_code=event.unique_code) }}" class="btn back-btn">
+        <i class="back-icon"></i> Voltar ao Evento
+    </a>
+</div>
+
+<div class="gallery-grid">
+    {% if photos %}
+        {% for photo in photos %}
+        <div class="gallery-item" data-photo-id="{{ photo.id }}">
+            <img src="{{ url_for('static', filename='uploads/' + photo.filename) }}" alt="Foto do evento">
+            <div class="photo-info">
+                <p class="photo-date">{{ photo.uploaded_at.strftime('%d/%m/%Y %H:%M') }}</p>
+                
+                {% if current_user.is_authenticated and current_user.is_admin %}
+                <div class="admin-controls">
+                    <a href="{{ url_for('download_photo', photo_id=photo.id) }}" class="btn small">
+                        <i class="download-icon"></i> Download
+                    </a>
+                    <button class="btn small delete-photo" data-photo-id="{{ photo.id }}">
+                        <i class="delete-icon"></i> Excluir
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <div class="no-photos">
+        <p>Ainda não há fotos neste evento.</p>
+        <a href="{{ url_for('event_page', unique_code=event.unique_code) }}" class="btn">
+            Seja o primeiro a enviar uma foto!
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+{% if current_user.is_authenticated and current_user.is_admin %}
+<!-- Modal de confirmação de exclusão (visível apenas para admins) -->
+<div id="delete-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <h3>Confirmar Exclusão</h3>
+        <p>Tem certeza que deseja excluir esta foto? Esta ação não pode ser desfeita.</p>
+        <div class="modal-buttons">
+            <button id="confirm-delete" class="btn danger">Excluir</button>
+            <button id="cancel-delete" class="btn">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Variável para armazenar o ID da foto a ser excluída
+    let photoToDelete = null;
+    
+    // Manipulador para botões de exclusão
+    document.querySelectorAll('.delete-photo').forEach(btn => {
+        btn.addEventListener('click', function() {
+            photoToDelete = this.getAttribute('data-photo-id');
+            document.getElementById('delete-modal').style.display = 'flex';
+        });
+    });
+    
+    // Cancelar exclusão
+    document.getElementById('cancel-delete').addEventListener('click', function() {
+        document.getElementById('delete-modal').style.display = 'none';
+    });
+    
+    // Confirmar exclusão
+    document.getElementById('confirm-delete').addEventListener('click', function() {
+        if (photoToDelete) {
+            fetch("{{ url_for('delete_photo', photo_id=0) }}".replace('0', photoToDelete), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remover a foto da galeria
+                    const itemToRemove = document.querySelector(`.gallery-item[data-photo-id="${photoToDelete}"]`);
+                    if (itemToRemove) {
+                        itemToRemove.remove();
+                    }
+                    
+                    // Verificar se a galeria está vazia
+                    if (document.querySelectorAll('.gallery-item').length === 0) {
+                        document.querySelector('.gallery-grid').innerHTML = `
+                            <div class="no-photos">
+                                <p>Ainda não há fotos neste evento.</p>
+                                <a href="{{ url_for('event_page', unique_code=event.unique_code) }}" class="btn">
+                                    Seja o primeiro a enviar uma foto!
+                                </a>
+                            </div>
+                        `;
+                    }
+                } else {
+                    alert('Erro ao excluir foto: ' + data.message);
+                }
+                
+                document.getElementById('delete-modal').style.display = 'none';
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Ocorreu um erro ao processar sua solicitação.');
+                document.getElementById('delete-modal').style.display = 'none';
+            });
+        }
+    });
+});
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}O Casamento da Lígia e do Paulo{% endblock %}
+
+{% block header_title %}O Casamento da Lígia e do Paulo{% endblock %}
+
+{% block content %}
+<section class="hero">
+    <div class="hero-content">
+        <h2>Lígia & Paulo</h2>
+        <p>Convidamos você a celebrar nosso amor no dia 17 de maio de 2025</p>
+        <div class="countdown" id="countdown" data-wedding-date="{{ wedding_date.isoformat() }}"></div>
+    </div>
+</section>
+
+<section class="about-couple">
+    <h2>Nosso Casamento</h2>
+    <p>Estamos muito felizes em compartilhar esse momento especial com você!</p>
+    <div class="couple-photos">
+        <img src="{{ url_for('static', filename='img/couple1.jpg') }}" alt="Lígia e Paulo">
+    </div>
+</section>
+
+{% if current_user.is_authenticated %}
+<section class="events-section">
+    <h2>Seus Eventos</h2>
+    
+    <a href="{{ url_for('create_event') }}" class="btn create-event-btn">
+        <i class="plus-icon"></i> Criar Novo Evento
+    </a>
+    
+    {% if events %}
+    <div class="events-grid">
+        {% for event in events %}
+        <div class="event-card">
+            <h3>{{ event.name }}</h3>
+            <p class="event-date">{{ event.date.strftime('%d/%m/%Y %H:%M') }}</p>
+            
+            {% if event.description %}
+            <p class="event-description">{{ event.description }}</p>
+            {% endif %}
+            
+            <div class="event-actions">
+                <a href="{{ url_for('event_page', unique_code=event.unique_code) }}" class="btn small">Ver Evento</a>
+                <a href="{{ url_for('gallery', unique_code=event.unique_code) }}" class="btn small">Ver Galeria</a>
+                
+                {% if event.qr_code_path %}
+                <a href="{{ url_for('static', filename=event.qr_code_path) }}" 
+                   download="qrcode_{{ event.name }}.png" class="btn small">
+                    Baixar QR Code
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="no-events">Você ainda não tem eventos. Clique no botão acima para criar seu primeiro evento!</p>
+    {% endif %}
+</section>
+{% else %}
+<section class="cta-section">
+    <h2>Crie seu Evento</h2>
+    <p>
+        Crie um evento e compartilhe um QR code com seus convidados para que eles 
+        possam enviar fotos diretamente para uma galeria online.
+    </p>
+    <div class="cta-buttons">
+        <a href="{{ url_for('login') }}" class="btn">Entrar</a>
+        <a href="{{ url_for('register') }}" class="btn">Registrar-se</a>
+    </div>
+</section>
+{% endif %}
+{% endblock %}
