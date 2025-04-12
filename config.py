@@ -19,9 +19,9 @@ MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB limite máximo
 MAIL_SERVER = 'smtp.gmail.com'
 MAIL_PORT = 587
 MAIL_USE_TLS = True
-MAIL_USERNAME = 'seu_email@gmail.com'  # Altere para seu email
-MAIL_PASSWORD = 'sua_senha_app'  # Use senha de app para Gmail
-MAIL_DEFAULT_SENDER = 'seu_email@gmail.com'  # Altere para seu email
+MAIL_USERNAME = 'casamentoligiaepaulo@gmail.com'
+MAIL_PASSWORD = 'gpbihptextqwsfgp'  
+MAIL_DEFAULT_SENDER = 'casamentoligiaepaulo@gmail.com'
 
 # Data do casamento
 WEDDING_DATE = datetime(2025, 5, 17)

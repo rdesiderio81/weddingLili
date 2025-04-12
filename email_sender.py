@@ -1,6 +1,5 @@
 from flask_mail import Mail, Message
 from app import app
-import os
 
 # Inicializar Mail
 mail = Mail(app)
@@ -22,43 +21,29 @@ def send_qr_code_email(to, event_name, event_date, qr_path):
         # Criar mensagem
         msg = Message(
             subject=f"QR Code para o evento: {event_name}",
-            recipients=[to]
+            recipients=[to],
+            body=f"""
+            Olá,
+
+            Seu evento foi criado com sucesso!
+
+            Nome do evento: {event_name}
+            Data: {formatted_date}
+
+            O QR Code para o evento está anexado a este email.
+
+            Obrigado,
+            Lígia e Paulo.
+            """
         )
         
-        # Conteúdo do email
-        msg.html = f"""
-        <html>
-        <body>
-            <h2>Seu evento foi criado com sucesso!</h2>
-            <p>
-                <strong>Nome do evento:</strong> {event_name}<br>
-                <strong>Data:</strong> {formatted_date}
-            </p>
-            <p>
-                Compartilhe o QR Code abaixo com seus convidados para que eles possam
-                enviar fotos diretamente para a galeria do evento.
-            </p>
-            <p>
-                <strong>Como usar:</strong><br>
-                1. Os convidados devem escanear o QR Code<br>
-                2. Na página aberta, eles podem tirar fotos diretamente ou escolher
-                   da galeria do dispositivo<br>
-                3. As fotos serão enviadas automaticamente para a galeria do evento
-            </p>
-        </body>
-        </html>
-        """
-        
-        # Anexar QR Code
-        with app.open_resource(qr_path) as qr:
-            msg.attach(
-                filename="qrcode_evento.png",
-                content_type="image/png",
-                data=qr.read()
-            )
+        # Anexar QR Code ao email
+        with open(qr_path, 'rb') as qr_file:
+            msg.attach("qrcode_evento.png", "image/png", qr_file.read())
         
         # Enviar email
         mail.send(msg)
+        print(f"Email enviado com sucesso para {to}")
         return True
     
     except Exception as e:
