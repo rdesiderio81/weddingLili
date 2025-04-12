@@ -20,7 +20,7 @@ MAIL_SERVER = 'smtp.gmail.com'
 MAIL_PORT = 587
 MAIL_USE_TLS = True
 MAIL_USERNAME = 'casamentoligiaepaulo@gmail.com'
-MAIL_PASSWORD = 'SUA_SENHA_DE_APP'  # Substitua pela senha de aplicativo gerada do Gmail
+MAIL_PASSWORD = 'gpbihptextqwsfgp'  # Substitua pela senha de aplicativo gerada do Gmail
 MAIL_DEFAULT_SENDER = 'casamentoligiaepaulo@gmail.com'
 
 # Link de reset de senha válido por 24 horas
