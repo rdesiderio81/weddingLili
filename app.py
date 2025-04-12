@@ -1,49 +1,51 @@
+# app.py
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_mail import Mail
+from flask_migrate import Migrate
 import os
-from datetime import datetime, timedelta
-import secrets
+from dotenv import load_dotenv
 
-# Inicializar aplicação Flask
+load_dotenv()
+
 app = Flask(__name__)
-app.config.from_pyfile('config.py')
+app.config.update(
+    SECRET_KEY=os.getenv('SECRET_KEY'),
+    SQLALCHEMY_DATABASE_URI=os.getenv('DATABASE_URL').replace('postgres://', 'postgresql://'),
+    SQLALCHEMY_TRACK_MODIFICATIONS=False,
+    UPLOAD_FOLDER=os.path.join(app.static_folder, 'uploads'),
+    QRCODE_FOLDER=os.path.join(app.static_folder, 'qrcodes'),
+    COVER_FOLDER=os.path.join(app.static_folder, 'covers'),
+    MAIL_SERVER=os.getenv('MAIL_SERVER'),
+    MAIL_PORT=os.getenv('MAIL_PORT'),
+    MAIL_USE_TLS=os.getenv('MAIL_USE_TLS'),
+    MAIL_USERNAME=os.getenv('MAIL_USERNAME'),
+    MAIL_PASSWORD=os.getenv('MAIL_PASSWORD')
+)
 
-# Garantir que as pastas de upload existam
-os.makedirs(os.path.join(app.static_folder, 'uploads'), exist_ok=True)
-os.makedirs(os.path.join(app.static_folder, 'qrcodes'), exist_ok=True)
-os.makedirs(os.path.join(app.static_folder, 'img'), exist_ok=True)
-
-# Inicializar extensões
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
-login_manager.login_view = 'login'
 mail = Mail(app)
+migrate = Migrate(app, db)
 
-# Importar para evitar importações circulares
-from models import User, Event, Photo, PasswordReset
+# Importar após inicialização para evitar circular imports
+from models import User
+from routes import *
 
-# Inicializar o banco de dados dentro do contexto da aplicação
-with app.app_context():
-    db.create_all()
-    
-    # Criar usuário administrador se não existir
-    from werkzeug.security import generate_password_hash
-    admin = User.query.filter_by(email='admin@eventos.com').first()
-    if not admin:
+# Criar admin padrão se não existir
+@app.before_first_request
+def create_admin():
+    admin_email = os.getenv('ADMIN_EMAIL')
+    if not User.query.filter_by(email=admin_email).first():
+        from werkzeug.security import generate_password_hash
         admin = User(
-            username='admin',
-            email='admin@eventos.com',
-            password_hash=generate_password_hash('admin123'),
+            email=admin_email,
+            password=generate_password_hash(os.getenv('ADMIN_PASSWORD')),
             is_admin=True
         )
         db.session.add(admin)
         db.session.commit()
-        print("Usuário administrador criado!")
-
-# Importar rotas após configuração inicial
-import routes
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
