@@ -22,8 +22,13 @@
         <i class="camera-icon"></i>
         <span>Tirar Foto</span>
     </button>
-    <a href="{{ url_for('gallery', unique_code=event.unique_code) }}" class="action-btn">
+    <label for="photo-file-input" class="action-btn">
         <i class="gallery-icon"></i>
+        <span>Escolher da Galeria</span>
+    </label>
+    <input type="file" id="photo-file-input" accept="image/*" style="display: none;">
+    <a href="{{ url_for('gallery', unique_code=event.unique_code) }}" class="action-btn">
+        <i class="photos-icon"></i>
         <span>Ver Galeria</span>
     </a>
 </div>
@@ -51,6 +56,14 @@
     </div>
 </div>
 
+<!-- Progress bar para upload (oculta inicialmente) -->
+<div id="upload-progress-container" class="upload-progress-container" style="display: none;">
+    <div class="progress-message">Enviando foto...</div>
+    <div class="progress-bar-outer">
+        <div id="progress-bar-inner" class="progress-bar-inner"></div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -58,9 +71,87 @@
 <script src="{{ url_for('static', filename='js/camera.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Inicializa a câmera
     initCamera({
         uploadUrl: "{{ url_for('upload_photo', unique_code=event.unique_code) }}",
         apiCompatible: checkApiCompatibility()
+    });
+    
+    // Upload de arquivo da galeria
+    const fileInput = document.getElementById('photo-file-input');
+    const uploadProgress = document.getElementById('upload-progress-container');
+    const progressBar = document.getElementById('progress-bar-inner');
+    const uploadFeedback = document.getElementById('upload-feedback');
+    const closeFeedback = document.getElementById('close-feedback');
+    
+    fileInput.addEventListener('change', function(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        // Verificar se é uma imagem
+        if (!file.type.match('image.*')) {
+            alert('Por favor, selecione uma imagem.');
+            return;
+        }
+        
+        // Mostrar progresso
+        uploadProgress.style.display = 'flex';
+        progressBar.style.width = '0%';
+        
+        // Criar FormData
+        const formData = new FormData();
+        formData.append('photo_file', file);
+        
+        // Enviar arquivo
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', "{{ url_for('upload_photo', unique_code=event.unique_code) }}", true);
+        
+        // Atualizar barra de progresso
+        xhr.upload.onprogress = function(e) {
+            if (e.lengthComputable) {
+                const percentComplete = (e.loaded / e.total) * 100;
+                progressBar.style.width = percentComplete + '%';
+            }
+        };
+        
+        // Quando o upload terminar
+        xhr.onload = function() {
+            uploadProgress.style.display = 'none';
+            
+            if (xhr.status === 200) {
+                try {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.success) {
+                        // Mostrar feedback de sucesso
+                        uploadFeedback.style.display = 'flex';
+                    } else {
+                        alert('Erro ao enviar foto: ' + response.message);
+                    }
+                } catch (e) {
+                    alert('Erro ao processar resposta do servidor.');
+                }
+            } else {
+                alert('Erro ao enviar foto. Por favor, tente novamente.');
+            }
+            
+            // Limpar input
+            fileInput.value = '';
+        };
+        
+        // Erro no upload
+        xhr.onerror = function() {
+            uploadProgress.style.display = 'none';
+            alert('Erro de conexão. Por favor, verifique sua internet e tente novamente.');
+            fileInput.value = '';
+        };
+        
+        // Enviar dados
+        xhr.send(formData);
+    });
+    
+    // Fechar feedback
+    closeFeedback.addEventListener('click', function() {
+        uploadFeedback.style.display = 'none';
     });
 });
 </script>

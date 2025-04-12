@@ -2,16 +2,17 @@ from flask import render_template, redirect, url_for, flash, request, jsonify, s
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
-from app import app, db
-from models import User, Event, Photo
+from app import app, db, mail
+from models import User, Event, Photo, PasswordReset
 from qr_generator import generate_qr_code
-from email_sender import send_qr_code_email
+from email_sender import send_qr_code_email, send_password_reset_email
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import uuid
 import base64
 from io import BytesIO
 from PIL import Image
+from flask_mail import Message
 
 # Funções auxiliares
 def allowed_file(filename):
@@ -32,7 +33,13 @@ def inject_context():
 def index():
     events = []
     if current_user.is_authenticated:
-        events = Event.query.filter_by(creator_id=current_user.id).order_by(Event.created_at.desc()).all()
+        # Verificar se o usuário é administrador
+        if current_user.is_admin:
+            # Administrador vê todos os eventos
+            events = Event.query.order_by(Event.created_at.desc()).all()
+        else:
+            # Usuários normais não vêem eventos, pois apenas admin pode criar
+            events = []
     return render_template('index.html', events=events)
 
 # Login
@@ -71,8 +78,8 @@ def register():
         # Verificar se email já existe
         user_exists = User.query.filter_by(email=email).first()
         if user_exists:
-            flash('Email já está em uso', 'error')
-            return redirect(url_for('register'))
+            flash('Este email já está cadastrado. Você pode recuperar sua senha.', 'info')
+            return redirect(url_for('forgot_password', email=email))
         
         # Criar novo usuário
         new_user = User(
@@ -96,10 +103,90 @@ def logout():
     logout_user()
     return redirect(url_for('index'))
 
-# Criar evento
+# Esqueci minha senha
+@app.route('/esqueci-senha', methods=['GET', 'POST'])
+def forgot_password():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    email = request.args.get('email', '')
+    
+    if request.method == 'POST':
+        email = request.form.get('email')
+        user = User.query.filter_by(email=email).first()
+        
+        if not user:
+            flash('Email não encontrado.', 'error')
+            return redirect(url_for('forgot_password'))
+        
+        # Gerar token de reset de senha
+        token = PasswordReset.generate_token()
+        expires_at = datetime.utcnow() + timedelta(seconds=app.config['PASSWORD_RESET_EXPIRES'])
+        
+        # Salvar token no banco de dados
+        reset = PasswordReset(
+            token=token,
+            user_id=user.id,
+            expires_at=expires_at
+        )
+        
+        db.session.add(reset)
+        db.session.commit()
+        
+        # Enviar email com link para redefinir senha
+        reset_url = url_for('reset_password', token=token, _external=True)
+        send_password_reset_email(user.email, reset_url)
+        
+        flash('Um email com instruções para redefinir sua senha foi enviado.', 'success')
+        return redirect(url_for('login'))
+    
+    return render_template('forgot_password.html', email=email)
+
+# Redefinir senha
+@app.route('/redefinir-senha/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    
+    # Buscar token no banco de dados
+    reset = PasswordReset.query.filter_by(token=token, used=False).first()
+    
+    # Verificar se token existe e não expirou
+    if not reset or reset.expires_at < datetime.utcnow():
+        flash('Link de redefinição de senha inválido ou expirado.', 'error')
+        return redirect(url_for('forgot_password'))
+    
+    if request.method == 'POST':
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        
+        if password != confirm_password:
+            flash('As senhas não coincidem.', 'error')
+            return redirect(url_for('reset_password', token=token))
+        
+        # Atualizar senha do usuário
+        user = User.query.get(reset.user_id)
+        user.password_hash = generate_password_hash(password)
+        
+        # Marcar token como usado
+        reset.used = True
+        
+        db.session.commit()
+        
+        flash('Senha redefinida com sucesso!', 'success')
+        return redirect(url_for('login'))
+    
+    return render_template('reset_password.html', token=token)
+
+# Criar evento (apenas para administradores)
 @app.route('/criar-evento', methods=['GET', 'POST'])
 @login_required
 def create_event():
+    # Verificar se o usuário é administrador
+    if not current_user.is_admin:
+        flash('Apenas administradores podem criar eventos.', 'error')
+        return redirect(url_for('index'))
+    
     if request.method == 'POST':
         name = request.form.get('name')
         description = request.form.get('description')
@@ -170,45 +257,79 @@ def gallery(unique_code):
 def upload_photo(unique_code):
     event = Event.query.filter_by(unique_code=unique_code).first_or_404()
     
-    if 'photo_data' not in request.form:
-        return jsonify({'success': False, 'message': 'Nenhuma foto enviada'})
+    # Verificar se a foto foi enviada via câmera (base64) ou arquivo
+    if 'photo_data' in request.form:
+        # Processar imagem Base64 da câmera
+        try:
+            photo_data = request.form['photo_data']
+            if 'data:image/' in photo_data:
+                # Remover o prefixo dos dados Base64
+                header, encoded = photo_data.split(',', 1)
+            else:
+                encoded = photo_data
+            
+            # Decodificar Base64
+            decoded_data = base64.b64decode(encoded)
+            
+            # Gerar nome de arquivo único
+            filename = f"{uuid.uuid4()}.jpg"
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            
+            # Salvar imagem no disco
+            with open(file_path, 'wb') as f:
+                f.write(decoded_data)
+            
+            # Salvar referência no banco de dados
+            user_id = current_user.id if current_user.is_authenticated else None
+            
+            new_photo = Photo(
+                filename=filename,
+                event_id=event.id,
+                user_id=user_id
+            )
+            
+            db.session.add(new_photo)
+            db.session.commit()
+            
+            return jsonify({'success': True})
+        
+        except Exception as e:
+            return jsonify({'success': False, 'message': str(e)})
     
-    try:
-        # Processar imagem Base64
-        photo_data = request.form['photo_data']
-        if 'data:image/' in photo_data:
-            # Remover o prefixo dos dados Base64
-            header, encoded = photo_data.split(',', 1)
+    elif 'photo_file' in request.files:
+        # Processar arquivo da galeria
+        file = request.files['photo_file']
+        
+        if file.filename == '':
+            return jsonify({'success': False, 'message': 'Nenhum arquivo selecionado'})
+        
+        if file and allowed_file(file.filename):
+            # Gerar nome de arquivo único
+            original_filename = secure_filename(file.filename)
+            filename = f"{uuid.uuid4()}_{original_filename}"
+            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            
+            # Salvar arquivo
+            file.save(file_path)
+            
+            # Salvar referência no banco de dados
+            user_id = current_user.id if current_user.is_authenticated else None
+            
+            new_photo = Photo(
+                filename=filename,
+                original_filename=original_filename,
+                event_id=event.id,
+                user_id=user_id
+            )
+            
+            db.session.add(new_photo)
+            db.session.commit()
+            
+            return jsonify({'success': True})
         else:
-            encoded = photo_data
-        
-        # Decodificar Base64
-        decoded_data = base64.b64decode(encoded)
-        
-        # Gerar nome de arquivo único
-        filename = f"{uuid.uuid4()}.jpg"
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        
-        # Salvar imagem no disco
-        with open(file_path, 'wb') as f:
-            f.write(decoded_data)
-        
-        # Salvar referência no banco de dados (user_id pode ser null)
-        user_id = current_user.id if current_user.is_authenticated else None
-        
-        new_photo = Photo(
-            filename=filename,
-            event_id=event.id,
-            user_id=user_id
-        )
-        
-        db.session.add(new_photo)
-        db.session.commit()
-        
-        return jsonify({'success': True})
+            return jsonify({'success': False, 'message': 'Tipo de arquivo não permitido'})
     
-    except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+    return jsonify({'success': False, 'message': 'Nenhuma foto enviada'})
 
 # Download de foto (apenas para administradores)
 @app.route('/download/<int:photo_id>')

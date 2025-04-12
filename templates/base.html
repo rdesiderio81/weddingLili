@@ -25,7 +25,9 @@
                     <li><a href="{{ url_for('index') }}">Início</a></li>
                     
                     {% if current_user.is_authenticated %}
+                        {% if current_user.is_admin %}
                         <li><a href="{{ url_for('create_event') }}">Criar Evento</a></li>
+                        {% endif %}
                         <li><a href="{{ url_for('logout') }}">Sair</a></li>
                     {% else %}
                         <li><a href="{{ url_for('login') }}">Entrar</a></li>

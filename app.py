@@ -1,26 +1,28 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
+from flask_mail import Mail
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
+import secrets
 
-# Inicializar aplicação Flask (a variável deve se chamar 'app' para o Gunicorn)
+# Inicializar aplicação Flask
 app = Flask(__name__)
 app.config.from_pyfile('config.py')
 
 # Garantir que as pastas de upload existam
 os.makedirs(os.path.join(app.static_folder, 'uploads'), exist_ok=True)
 os.makedirs(os.path.join(app.static_folder, 'qrcodes'), exist_ok=True)
+os.makedirs(os.path.join(app.static_folder, 'img'), exist_ok=True)
 
-# Inicializar banco de dados
+# Inicializar extensões
 db = SQLAlchemy(app)
-
-# Inicializar gerenciador de login
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+mail = Mail(app)
 
 # Importar para evitar importações circulares
-from models import User, Event, Photo
+from models import User, Event, Photo, PasswordReset
 
 # Inicializar o banco de dados dentro do contexto da aplicação
 with app.app_context():

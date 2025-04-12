@@ -21,9 +21,9 @@
     </div>
 </section>
 
-{% if current_user.is_authenticated %}
+{% if current_user.is_authenticated and current_user.is_admin %}
 <section class="events-section">
-    <h2>Seus Eventos</h2>
+    <h2>Eventos</h2>
     
     <a href="{{ url_for('create_event') }}" class="btn create-event-btn">
         <i class="plus-icon"></i> Criar Novo Evento

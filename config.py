@@ -15,13 +15,16 @@ QRCODE_FOLDER = os.path.join(BASEDIR, 'static', 'qrcodes')
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB limite máximo
 
-# Configuração de email (ajuste conforme seu provedor de email)
+# Configuração de email
 MAIL_SERVER = 'smtp.gmail.com'
 MAIL_PORT = 587
 MAIL_USE_TLS = True
 MAIL_USERNAME = 'casamentoligiaepaulo@gmail.com'
-MAIL_PASSWORD = 'gpbihptextqwsfgp'  
+MAIL_PASSWORD = 'SUA_SENHA_DE_APP'  # Substitua pela senha de aplicativo gerada do Gmail
 MAIL_DEFAULT_SENDER = 'casamentoligiaepaulo@gmail.com'
+
+# Link de reset de senha válido por 24 horas
+PASSWORD_RESET_EXPIRES = 86400  # segundos (24 horas)
 
 # Data do casamento
 WEDDING_DATE = datetime(2025, 5, 17)
