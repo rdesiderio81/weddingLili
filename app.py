@@ -44,20 +44,33 @@ migrate = Migrate(app, db)
 
 from models import User, Event, Photo
 
-@app.before_first_request
-def create_admin():
-    admin_email = os.getenv('ADMIN_EMAIL', 'admin@eventos.com')
-    if not User.query.filter_by(email=admin_email).first():
-        from werkzeug.security import generate_password_hash
-        admin = User(
-            email=admin_email,
-            password=generate_password_hash(os.getenv('ADMIN_PASSWORD', 'admin123')),
-            is_admin=True
-        )
-        db.session.add(admin)
-        db.session.commit()
+# Inicializar extensões
+    db.init_app(app)
+    login_manager.init_app(app)
+    mail.init_app(app)
 
-from routes import *
+    # Criar tabelas e inicializar admin no contexto da aplicação
+    with app.app_context():
+        db.create_all()
+        
+        admin_email = os.getenv('ADMIN_EMAIL', 'admin@eventos.com')
+        if not User.query.filter_by(email=admin_email).first():
+            from werkzeug.security import generate_password_hash
+            admin = User(
+                email=admin_email,
+                password=generate_password_hash(os.getenv('ADMIN_PASSWORD', 'admin123')),
+                is_admin=True
+            )
+            db.session.add(admin)
+            db.session.commit()
+            print("Usuário administrador criado.")
+
+    # Importar rotas
+    from routes import bp as routes_bp
+    app.register_blueprint(routes_bp)
+
+    return app
 
 if __name__ == '__main__':
+    app = create_app()
     app.run()
