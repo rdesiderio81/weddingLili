@@ -1,0 +1,24 @@
+# Python
+*.pyc
+__pycache__/
+env/
+venv/
+
+# Banco de dados
+*.db
+*.sqlite
+
+# Environment
+.env
+.env.prod
+
+# Uploads
+/event_system/static/uploads/*
+!/event_system/static/uploads/.gitkeep
+/event_system/static/qrcodes/*
+!/event_system/static/qrcodes/.gitkeep
+/event_system/static/covers/*
+!/event_system/static/covers/.gitkeep
+
+# Outros
+.DS_Store
