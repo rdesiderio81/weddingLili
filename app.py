@@ -15,6 +15,7 @@ app = Flask(__name__)
 db_url = os.getenv('DATABASE_URL')
 if not db_url:
     raise RuntimeError("DATABASE_URL não está definida!")
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url.replace('postgres://', 'postgresql://', 1)
 
 app.config.update(
     SECRET_KEY=os.getenv('SECRET_KEY', 'dev_key_123'),
