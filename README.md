@@ -1,2 +1,2 @@
 # weddingLili
-Eventos QR
+Wedding photo site
