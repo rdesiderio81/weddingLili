@@ -1,5 +1,6 @@
 from flask_mail import Message
-from app import mail, app
+from flask import current_app
+from extensions import mail
 
 def send_qr_code_email(to, event_name, event_date, qr_path):
     try:
@@ -14,7 +15,7 @@ def send_qr_code_email(to, event_name, event_date, qr_path):
         Compartilhe o QR Code abaixo com seus convidados para que eles possam enviar fotos diretamente para a galeria do evento.<br>
         <img src="{qr_path}" alt="QR Code do Evento">
         """
-        with app.app_context():
+        with current_app.app_context():
             mail.send(msg)
         return True
     except Exception as e:

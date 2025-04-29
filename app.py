@@ -1,17 +1,9 @@
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager
-from flask_mail import Mail
-from flask_migrate import Migrate
-import os
+from extensions import db, login_manager, mail, migrate
 from dotenv import load_dotenv
+import os
 
 load_dotenv()
-
-db = SQLAlchemy()
-login_manager = LoginManager()
-mail = Mail()
-migrate = Migrate()
 
 def create_app():
     app = Flask(__name__)
@@ -20,8 +12,24 @@ def create_app():
     login_manager.init_app(app)
     mail.init_app(app)
     migrate.init_app(app, db)
+
     with app.app_context():
-        import routes
+        from routes import register_routes
+        register_routes(app)
+        db.create_all()
+        from models import User
+        from werkzeug.security import generate_password_hash
+        admin_email = os.getenv('ADMIN_EMAIL', 'admin@eventos.com')
+        admin_password = os.getenv('ADMIN_PASSWORD', 'admin123')
+        if not User.query.filter_by(email=admin_email).first():
+            admin = User(
+                email=admin_email,
+                password=generate_password_hash(admin_password),
+                is_admin=True
+            )
+            db.session.add(admin)
+            db.session.commit()
+            print("✅ Administrador criado com sucesso")
     return app
 
 app = create_app()

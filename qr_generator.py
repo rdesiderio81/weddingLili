@@ -1,6 +1,6 @@
 import qrcode
 import os
-from app import app
+from flask import current_app
 
 def generate_qr_code(event_id, unique_code, base_url):
     event_url = f"{base_url}evento/{unique_code}"
@@ -15,6 +15,6 @@ def generate_qr_code(event_id, unique_code, base_url):
     img = qr.make_image(fill_color="black", back_color="white")
     qr_filename = f"qrcode_event_{event_id}.png"
     relative_path = os.path.join('qrcodes', qr_filename)
-    full_path = os.path.join(app.static_folder, relative_path)
+    full_path = os.path.join(current_app.static_folder, relative_path)
     img.save(full_path)
     return relative_path
